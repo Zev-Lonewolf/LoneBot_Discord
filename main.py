@@ -1,107 +1,126 @@
 import discord
 from discord.ext import commands
-import asyncio
+from discord import app_commands
 import os
 from dotenv import load_dotenv
-from flask import Flask
-from threading import Thread
+from keep_alive import keep_alive
 
+# Carregar variáveis de ambiente
 load_dotenv()
 
-# Flask app para manter o bot online
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "LoneBot está online!"
-
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
-
-# Intents
 intents = discord.Intents.default()
-intents.members = True
 intents.message_content = True
+intents.guilds = True
+intents.members = True
 
-# Inicializa o bot
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Armazena idioma dos servidores (temporário)
-server_languages = {}
+guild_languages = {}  # Dicionário para armazenar a linguagem de cada servidor
+language_set = set()  # Servidores que já escolheram o idioma
+
+def create_language_embed():
+    embed = discord.Embed(
+        title="🌐 Choose your language / Escolha seu idioma",
+        description=(
+            "🇺🇸 React with this emoji for English\n"
+            "🇧🇷 Reaja com este emoji para Português (BR)"
+        ),
+        color=discord.Color.blurple()
+    )
+    embed.set_footer(text="🔍 Detecting roles automatically... / Detectando cargos automaticamente...")
+    return embed
+
+def create_intro_embed(lang):
+    if lang == "ptbr":
+        embed = discord.Embed(
+            title="👋Olá! Eu sou o LoneBot!",
+            description=(
+                "Sou um bot modular e versátil que ajuda a organizar modos personalizados no seu servidor. Me diz, o que você quer fazer agora?\n\n"
+                "Comandos principais:\n"
+                "```text\n!setup → iniciar configuração de modos\n!idioma → ativa a seleção de idiomas\n```\n\n"
+                "Site: Em breve..."
+            ),
+            color=discord.Color.green()
+        )
+        embed.set_footer(text="🔍 Confirmando cargos para evitar erros...")
+    else:
+        embed = discord.Embed(
+            title="👋Hello! I'm LoneBot!",
+            description=(
+                "I'm a modular and versatile bot that helps organize custom modes in your server. So, what do you want to do now?\n\n"
+                "Main commands:\n"
+                "```text\n!setup → start mode configuration\n!language → activates the language selection screen\n```\n\n"
+                "Site: Coming soon..."
+            ),
+            color=discord.Color.green()
+        )
+        embed.set_footer(text="🔍 Confirming roles to avoid errors...")
+    return embed
 
 @bot.event
 async def on_ready():
-    print(f'Bot conectado como {bot.user}')
+    print(f"🤖 {bot.user} está online!")
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="Como assim erro na linha 33?"))
 
 @bot.event
 async def on_guild_join(guild):
-    channel = next((c for c in guild.text_channels if c.permissions_for(guild.me).send_messages), None)
-    if not channel:
+    general = None
+    for channel in guild.text_channels:
+        if channel.permissions_for(guild.me).send_messages:
+            general = channel
+            break
+
+    if general and str(guild.id) not in language_set:
+        embed = create_language_embed()
+        msg = await general.send(embed=embed)
+        await msg.add_reaction("🇺🇸")
+        await msg.add_reaction("🇧🇷")
+
+@bot.event
+async def on_raw_reaction_add(payload):
+    if payload.member.bot:
         return
 
-    embed = discord.Embed(
-        title="🌍 Choose your language / Escolha seu idioma",
-        description="React with 🇨🇷 for English or 🇧🇷 para Português.",
-        color=discord.Color.blurple()
-    )
-    message = await channel.send(embed=embed)
-    await message.add_reaction("\U0001F1FA\U0001F1F8")  # 🇺🇸
-    await message.add_reaction("\U0001F1E7\U0001F1F7")  # 🇧🇷
-
-    def check(reaction, user):
-        return (
-            user != bot.user and
-            str(reaction.emoji) in ["\U0001F1FA\U0001F1F8", "\U0001F1E7\U0001F1F7"] and
-            reaction.message.id == message.id
-        )
-
-    try:
-        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
-    except asyncio.TimeoutError:
-        await channel.send("⏱️ Tempo esgotado. Você pode reiniciar a configuração com `!setup`.")
+    guild_id = str(payload.guild_id)
+    if guild_id in language_set:
         return
 
-    lang = "pt" if str(reaction.emoji) == "\U0001F1E7\U0001F1F7" else "en"
-    server_languages[guild.id] = lang
+    channel = bot.get_channel(payload.channel_id)
+    message = await channel.fetch_message(payload.message_id)
 
-    await send_intro(channel, lang)
+    if payload.emoji.name == "🇺🇸":
+        guild_languages[guild_id] = "en"
+        embed = create_intro_embed("en")
+        await channel.send(embed=embed)
+        language_set.add(guild_id)
+    elif payload.emoji.name == "🇧🇷":
+        guild_languages[guild_id] = "ptbr"
+        embed = create_intro_embed("ptbr")
+        await channel.send(embed=embed)
+        language_set.add(guild_id)
 
-async def send_intro(channel, lang):
-    if lang == "pt":
-        embed = discord.Embed(
-            title="👋 Olá! Eu sou o LoneBot!",
-            description=(
-                "Sou um bot modular e versátil que ajuda a **organizar modos personalizados** no seu servidor.\n\n"
-                "**Comandos principais:**\n"
-                "`!setup` → iniciar configuração de modos\n"
-                "`!modo_nome` → ativa o modo configurado\n\n"
-                "**Site:** Em breve: [LoneBot](https://exemplo.com)\n"
-                "Deseja iniciar agora a configuração dos modos?"
-            ),
-            color=discord.Color.green()
-        )
-    else:
-        embed = discord.Embed(
-            title="👋 Hello! I'm LoneBot!",
-            description=(
-                "I'm a modular and flexible bot that helps you **organize custom modes** in your server.\n\n"
-                "**Main Commands:**\n"
-                "`!setup` → start modes setup\n"
-                "`!mode_name` → activates the configured mode\n\n"
-                "**Website:** Coming soon: [LoneBot](https://example.com)\n"
-                "Would you like to start configuring the modes now?"
-            ),
-            color=discord.Color.green()
-        )
+@bot.command(name="idioma")
+async def idioma(ctx):
+    guild_id = str(ctx.guild.id)
+    embed = create_language_embed()
+    msg = await ctx.send(embed=embed)
+    await msg.add_reaction("🇺🇸")
+    await msg.add_reaction("🇧🇷")
+    if guild_id in language_set:
+        language_set.remove(guild_id)
 
-    embed.set_footer(text="Responda com !setup para começar." if lang == "pt" else "Type !setup to begin.")
-    await channel.send(embed=embed)
+@bot.command(name="language")
+async def language(ctx):
+    await idioma(ctx)
 
-# Rodar web server e bot
+@bot.event
+async def on_message(message):
+    if message.author == bot.user or not message.guild:
+        return
+
+    await bot.process_commands(message)
+
+# Manter web server e iniciar o bot
 keep_alive()
 
 token = os.getenv("DISCORD_TOKEN")
