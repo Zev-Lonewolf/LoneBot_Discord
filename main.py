@@ -12,7 +12,7 @@ intents.message_content = True
 intents.guilds = True
 intents.members = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents, case_insensitive=True)
 
 guild_languages = {}
 language_set = set()
@@ -144,19 +144,23 @@ async def setup(ctx):
             "Bem-vindo ao **modo de configuração**!\n\n"
             "**Comandos principais:**\n"
             "`!Criar` → Inicia o modo de criação de modos\n"
-            "`!Editar` → Edita modos já configurados\n"
-            "`!Verificar` → Verifica os cargos detectados e modos criados\n"
+            "`!Editar` → Inicia o modo para editar os modos já configurados\n"
+            "`!Verificar` → Verificar cargos detectados e os modos já criados\n"
+            "`!Funções` → Lista os comandos disponíveis (em desenvolvimento)\n"
+            "`!Sobre` → Informações sobre o projeto e seu criador\n"
             "**Site:** Em breve...\n\n"
-            "Use `!language` para trocar o idioma."
+            "Use `!idioma` para trocar o idioma."
         )
     else:
         title = "📘 Setup Panel"
         description = (
             "Welcome to the **setup mode**!\n\n"
             "**Main Commands:**\n"
-            "`!Criar` → Starts creation mode\n"
-            "`!Editar` → Edits existing modes\n"
-            "`!Verificar` → Checks scanned roles and existing modes\n"
+            "`!Create` → Starts creation mode\n"
+            "`!Edit` → Starts editing existing modes\n"
+            "`!Check` → Check detected roles and created modes\n"
+            "`!Functions` → Lists available commands (work in progress)\n"
+            "`!About` → Information about the project and its creator\n"
             "**Site:** Coming soon...\n\n"
             "Use `!language` to change language."
         )
@@ -165,6 +169,54 @@ async def setup(ctx):
     embed.set_footer(text="⏳ Apagando mensagens anteriores pra manter o canal limpo")
 
     await ctx.send(embed=embed)
+
+@bot.command(name="funções", aliases=["functions"])
+async def funcoes(ctx):
+    guild_id = str(ctx.guild.id)
+    lang = guild_languages.get(guild_id, "ptbr")
+
+    if lang == "ptbr":
+        desc = (
+            "📘 **Funções disponíveis**\n\n"
+            "O projeto ainda está em andamento, então essa parte não está finalizada.\n"
+            "Fique ligado para novidades!"
+        )
+    else:
+        desc = (
+            "📘 **Available Functions**\n\n"
+            "The project is still under development, so this part is not finalized yet.\n"
+            "Stay tuned for updates!"
+        )
+
+    embed = discord.Embed(description=desc, color=discord.Color.blurple())
+    await ctx.send(embed=embed)
+    await ctx.message.delete()
+
+@bot.command(name="sobre", aliases=["about"])
+async def sobre(ctx):
+    guild_id = str(ctx.guild.id)
+    lang = guild_languages.get(guild_id, "ptbr")
+
+    if lang == "ptbr":
+        desc = (
+            "🤖 **Sobre o LoneBot**\n\n"
+            "O LoneBot nasceu da vontade de facilitar a organização de servidores com múltiplos 'modos'.\n"
+            "Seu criador, **Gleidson Gonzaga, conhecido como Zev**, decidiu criar um bot modular, inteligente e adaptável a qualquer tipo de comunidade.\n\n"
+            "Este projeto está em constante evolução e é um reflexo direto da paixão por bots, roleplay e automação de servidores.\n\n"
+            "🔗 GitHub: https://github.com/zev-lonewolf"
+        )
+    else:
+        desc = (
+            "🤖 **About LoneBot**\n\n"
+            "LoneBot was created to make it easier to organize servers with multiple 'modes'.\n"
+            "Its creator, **Gleidson Gonzaga, known as Zev**, decided to create a modular, smart, and adaptable bot for any community.\n\n"
+            "This project is always evolving and reflects a strong passion for bots, roleplay, and server automation.\n\n"
+            "🔗 GitHub: https://github.com/zev-lonewolf"
+        )
+
+    embed = discord.Embed(description=desc, color=discord.Color.green())
+    await ctx.send(embed=embed)
+    await ctx.message.delete()
 
 @bot.event
 async def on_message(message):
