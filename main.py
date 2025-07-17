@@ -1,11 +1,10 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 import os
 from dotenv import load_dotenv
-from keep_alive import keep_alive
+from flask import Flask
+from threading import Thread
 
-# Carregar variáveis de ambiente
 load_dotenv()
 
 intents = discord.Intents.default()
@@ -15,8 +14,21 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-guild_languages = {}  # Dicionário para armazenar a linguagem de cada servidor
-language_set = set()  # Servidores que já escolheram o idioma
+guild_languages = {}
+language_set = set()
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "LoneBot está no ar!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
 
 def create_language_embed():
     embed = discord.Embed(
@@ -110,19 +122,56 @@ async def idioma(ctx):
     await msg.add_reaction("🇧🇷")
     if guild_id in language_set:
         language_set.remove(guild_id)
+    await ctx.message.delete()
 
 @bot.command(name="language")
 async def language(ctx):
     await idioma(ctx)
 
+@bot.command(name="setup")
+async def setup(ctx):
+    guild_id = str(ctx.guild.id)
+    lang = guild_languages.get(guild_id)
+    if lang not in ["ptbr", "en"]:
+        lang = "en"
+
+    await ctx.message.delete()
+    await ctx.channel.purge(limit=10, check=lambda m: m.author == bot.user)
+
+    if lang == "ptbr":
+        title = "📘 Painel de Configuração"
+        description = (
+            "Bem-vindo ao **modo de configuração**!\n\n"
+            "**Comandos principais:**\n"
+            "`!Criar` → Inicia o modo de criação de modos\n"
+            "`!Editar` → Edita modos já configurados\n"
+            "`!Verificar` → Verifica os cargos detectados e modos criados\n"
+            "**Site:** Em breve...\n\n"
+            "Use `!language` para trocar o idioma."
+        )
+    else:
+        title = "📘 Setup Panel"
+        description = (
+            "Welcome to the **setup mode**!\n\n"
+            "**Main Commands:**\n"
+            "`!Criar` → Starts creation mode\n"
+            "`!Editar` → Edits existing modes\n"
+            "`!Verificar` → Checks scanned roles and existing modes\n"
+            "**Site:** Coming soon...\n\n"
+            "Use `!language` to change language."
+        )
+
+    embed = discord.Embed(title=title, description=description, color=discord.Color.blue())
+    embed.set_footer(text="⏳ Apagando mensagens anteriores pra manter o canal limpo")
+
+    await ctx.send(embed=embed)
+
 @bot.event
 async def on_message(message):
     if message.author == bot.user or not message.guild:
         return
-
     await bot.process_commands(message)
 
-# Manter web server e iniciar o bot
 keep_alive()
 
 token = os.getenv("DISCORD_TOKEN")
