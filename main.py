@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask
 from threading import Thread
+from discord import TextChannel
 
 load_dotenv()
 
@@ -100,6 +101,9 @@ async def on_raw_reaction_add(payload):
         return
 
     channel = bot.get_channel(payload.channel_id)
+    if not isinstance(channel, TextChannel):
+        return
+
     message = await channel.fetch_message(payload.message_id)
 
     if payload.emoji.name == "🇺🇸":
@@ -113,7 +117,7 @@ async def on_raw_reaction_add(payload):
         await channel.send(embed=embed)
         language_set.add(guild_id)
 
-@bot.command(name="idioma")
+@bot.command(name="idioma", aliases=["language", "lang", "idiomas", "languages"])
 async def idioma(ctx):
     guild_id = str(ctx.guild.id)
     embed = create_language_embed()
@@ -123,10 +127,6 @@ async def idioma(ctx):
     if guild_id in language_set:
         language_set.remove(guild_id)
     await ctx.message.delete()
-
-@bot.command(name="language")
-async def language(ctx):
-    await idioma(ctx)
 
 @bot.command(name="setup")
 async def setup(ctx):
@@ -170,50 +170,81 @@ async def setup(ctx):
 
     await ctx.send(embed=embed)
 
-@bot.command(name="funções", aliases=["functions"])
-async def funcoes(ctx):
-    guild_id = str(ctx.guild.id)
+@bot.command(name="verificar", aliases=["check"])
+async def verificar(ctx):
+    guild = ctx.guild
+    guild_id = str(guild.id)
     lang = guild_languages.get(guild_id, "ptbr")
 
-    if lang == "ptbr":
+    roles = [role.name for role in guild.roles if role.name != "@everyone"]
+
+    if not roles:
         desc = (
-            "📘 **Funções disponíveis**\n\n"
-            "O projeto ainda está em andamento, então essa parte não está finalizada.\n"
-            "Fique ligado para novidades!"
+            "⚠️ **Nenhum cargo foi encontrado.**\nVocê pode usar `!Manual` para adicionar cargos manualmente."
+            if lang == "ptbr"
+            else "⚠️ **No roles found.**\nYou can use `!Manual` to add roles manually."
         )
     else:
         desc = (
-            "📘 **Available Functions**\n\n"
-            "The project is still under development, so this part is not finalized yet.\n"
-            "Stay tuned for updates!"
+            "📌 **Cargos encontrados no servidor:**\n\n"
+            if lang == "ptbr"
+            else "📌 **Roles found in this server:**\n\n"
         )
+        desc += "\n".join([f"- {role}" for role in roles])
+        desc += "\n\n⚙️ *Modos criados:* *(em breve será listado aqui...)*"
 
+    embed = discord.Embed(description=desc, color=discord.Color.orange())
+    await ctx.send(embed=embed)
+    await ctx.message.delete()
+
+@bot.command(name="criar", aliases=["create"])
+async def criar(ctx):
+    lang = guild_languages.get(str(ctx.guild.id), "ptbr")
+    msg = (
+        "🚧 O comando `!criar` ainda está em desenvolvimento. Fique ligado para atualizações!"
+        if lang == "ptbr"
+        else "🚧 The `!create` command is still under development. Stay tuned for updates!"
+    )
+    await ctx.send(msg, delete_after=10)
+    await ctx.message.delete()
+
+@bot.command(name="editar", aliases=["edit"])
+async def editar(ctx):
+    lang = guild_languages.get(str(ctx.guild.id), "ptbr")
+    msg = (
+        "🛠️ O comando `!editar` ainda está sendo construído. Em breve estará disponível!"
+        if lang == "ptbr"
+        else "🛠️ The `!edit` command is still being built. It will be available soon!"
+    )
+    await ctx.send(msg, delete_after=10)
+    await ctx.message.delete()
+
+@bot.command(name="funções", aliases=["functions"])
+async def funcoes(ctx):
+    lang = guild_languages.get(str(ctx.guild.id), "ptbr")
+    desc = (
+        "📘 **Funções disponíveis**\n\nO projeto ainda está em andamento, então essa parte não está finalizada.\nFique ligado para novidades!"
+        if lang == "ptbr"
+        else "📘 **Available Functions**\n\nThe project is still under development, so this part is not finalized yet.\nStay tuned for updates!"
+    )
     embed = discord.Embed(description=desc, color=discord.Color.blurple())
     await ctx.send(embed=embed)
     await ctx.message.delete()
 
 @bot.command(name="sobre", aliases=["about"])
 async def sobre(ctx):
-    guild_id = str(ctx.guild.id)
-    lang = guild_languages.get(guild_id, "ptbr")
-
-    if lang == "ptbr":
-        desc = (
-            "🤖 **Sobre o LoneBot**\n\n"
-            "O LoneBot nasceu da vontade de facilitar a organização de servidores com múltiplos 'modos'.\n"
-            "Seu criador, **Gleidson Gonzaga, conhecido como Zev**, decidiu criar um bot modular, inteligente e adaptável a qualquer tipo de comunidade.\n\n"
-            "Este projeto está em constante evolução e é um reflexo direto da paixão por bots, roleplay e automação de servidores.\n\n"
-            "🔗 GitHub: https://github.com/zev-lonewolf"
-        )
-    else:
-        desc = (
-            "🤖 **About LoneBot**\n\n"
-            "LoneBot was created to make it easier to organize servers with multiple 'modes'.\n"
-            "Its creator, **Gleidson Gonzaga, known as Zev**, decided to create a modular, smart, and adaptable bot for any community.\n\n"
-            "This project is always evolving and reflects a strong passion for bots, roleplay, and server automation.\n\n"
-            "🔗 GitHub: https://github.com/zev-lonewolf"
-        )
-
+    lang = guild_languages.get(str(ctx.guild.id), "ptbr")
+    desc = (
+        "🤖 **Sobre o LoneBot**\n\nO LoneBot nasceu da vontade de facilitar a organização de servidores com múltiplos 'modes'.\n"
+        "Seu criador, **Gleidson Gonzaga, conhecido como Zev**, decidiu criar um bot modular, inteligente e adaptável a qualquer tipo de comunidade.\n\n"
+        "Este projeto está em constante evolução e é um reflexo direto da paixão por bots, roleplay e automação de servidores.\n\n"
+        "🔗 GitHub: https://github.com/zev-lonewolf"
+        if lang == "ptbr"
+        else "🤖 **About LoneBot**\n\nLoneBot was created to make it easier to organize servers with multiple 'modes'.\n"
+        "Its creator, **Gleidson Gonzaga, known as Zev**, decided to create a modular, smart, and adaptable bot for any community.\n\n"
+        "This project is always evolving and reflects a strong passion for bots, roleplay, and server automation.\n\n"
+        "🔗 GitHub: https://github.com/zev-lonewolf"
+    )
     embed = discord.Embed(description=desc, color=discord.Color.green())
     await ctx.send(embed=embed)
     await ctx.message.delete()
