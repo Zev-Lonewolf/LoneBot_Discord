@@ -35,10 +35,11 @@ def create_intro_embed(lang):
         embed = discord.Embed(
             title="👋Olá! Eu sou o LoneBot!",
             description=(
-                "Sou um bot modular e versátil que ajuda a organizar modos personalizados no seu servidor. Me diz, o que você quer fazer agora?\n\n"
-                "Comandos principais:\n"
-                "```text\n!setup → iniciar configuração de modos\n!idioma → ativa a seleção de idiomas\n```\n\n"
-                "Site: Em breve..."
+                "**Sou um bot modular e versátil** que ajuda a **organizar modos personalizados** no seu servidor. Me diz, o que você quer fazer agora?\n\n"
+                "**Comandos principais:**\n"
+                "`!setup` → iniciar configuração de modos\n"
+                "`!idioma` → ativa a seleção de idiomas\n\n"
+                "**Site:** Em breve..."
             ),
             color=discord.Color.green()
         )
@@ -47,10 +48,11 @@ def create_intro_embed(lang):
         embed = discord.Embed(
             title="👋Hello! I'm LoneBot!",
             description=(
-                "I'm a modular and versatile bot that helps organize custom modes in your server. So, what do you want to do now?\n\n"
-                "Main commands:\n"
-                "```text\n!setup → start mode configuration\n!language → activates the language selection screen\n```\n\n"
-                "Site: Coming soon..."
+                "**I'm a modular and versatile bot** that helps **organize custom modes** in your server. So, what do you want to do now?\n\n"
+                "**Main commands:**\n"
+                "`!setup` → start mode configuration\n"
+                "`!language` → activates the language selection screen\n\n"
+                "**Site:** Coming soon..."
             ),
             color=discord.Color.green()
         )
